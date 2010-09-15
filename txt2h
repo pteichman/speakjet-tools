@@ -1,0 +1,122 @@
+#!/usr/bin/env python
+
+import re
+import sys
+import types
+
+from speakjet import Tokenizer, Dictionary
+
+d = Dictionary()
+d.load_file("PhraseALator.Dic")
+d.load_file("yasty.dic")
+
+if len(sys.argv) < 2:
+    print "USAGE: txt2h <text file>"
+
+filename = sys.argv[1]
+fd = open(filename)
+
+# read all the sentences
+sentences = []
+
+tokenizer = Tokenizer()
+seen = { }
+
+for line in fd.xreadlines():
+    tokens = tokenizer.tokenize(line)
+
+    # save all the known tokens
+    for token in tokens:
+        if not seen.has_key(token):
+            seen[token] = d.lookup(token)
+
+    sentences.append(tokens)
+
+def make_identifier(token):
+    if len(token) == 0:
+        token = "SPACE"
+
+    if token == "":
+        token = "SPACE"
+    elif token == ",":
+        token = "COMMA"
+    elif token == ".":
+        token = "PERIOD"
+    elif token == ":":
+        token = "COLON"
+
+    token = re.sub(r"'", "_", token);
+    return "___%s" % token
+
+words = seen.keys()
+words.sort()
+
+for word in words:
+    var = make_identifier(word)
+    codes = seen[word]
+
+    if type(codes) in types.StringTypes:
+        print "PROGMEM const prog_char %s[] = \"%s\";" % (var, codes)
+    else:
+        s = ", ".join(map(str, codes))
+        print "PROGMEM const prog_char %s[] = { %s, 0 };" % (var, s)
+
+print
+for i, sentence in enumerate(sentences):
+    print "PROGMEM const prog_char *phrase_%d[] = {" % i,
+
+    print ", ".join(map(make_identifier, sentence)), ", 0",
+
+    print "};"
+
+print
+print "PROGMEM const prog_char **phrases[] = {"
+for i in range(len(sentences)):
+    if i != len(sentences) - 1:
+        extra = ","
+    else:
+        extra = ""
+
+    print "phrase_%d%s" % (i, extra)
+print "};"
+
+print
+print "unsigned int numPhrases = sizeof(phrases)/sizeof(prog_char **);"
+    
+sys.exit(0)
+
+from pprint import pprint
+sys.exit(0)
+
+if False:
+    line = line.strip()
+    total_len += len(line)
+
+    found_banned = False
+    for banned in "'_\"()?!,-.":
+        if line.find(banned) != -1:
+            found_banned = True
+            break
+    if found_banned:
+        pass
+
+    words = [ word.strip("\"'").lower() for word in line.split() ]
+    if "break" in words:
+        pass
+
+    sentences.append(words)
+
+    for word in words:
+        try:
+            codes = d.lookup(word)
+
+            if seen_words.has_key(word):
+                words_len += 1
+            else:
+                seen_words[word] = codes
+                words_len += len(codes) + len(words)
+        except KeyError:
+            # print "No pronunciation for '%s'" % word
+            seen_words[word] = word
+
+sys.exit(0)
